@@ -10,7 +10,7 @@ import CoreData
 class DataController: ObservableObject {
 	let container: NSPersistentCloudKitContainer
 
-	@Published var selectedFilter: Filter? = Filter.all
+	@Published var selectedFilter: Filter? = .all
 
 	static var preview: DataController = {
 		let dataController = DataController(inMemory: true)
@@ -25,12 +25,43 @@ class DataController: ObservableObject {
 			container.persistentStoreDescriptions.first?.url = URL(filePath: "/dev/null")
 		}
 
+		// Automatically apply to our viewContext (memory) any changes that happen to the
+		// persistent store (SQLite database on disk). This is so these two stay in sync automatically.
+		container.viewContext.automaticallyMergesChangesFromParent = true
+		// How to handle merging local and remote data
+		// NSMergePolicy.mergeByPropertyObjectTrump => In-memory changes take precedence over remote changes
+		container.viewContext.mergePolicy = NSMergePolicy.mergeByPropertyObjectTrump
+
+
+		// When working across multiple devices, to ensure our syncing works properly, we want to be notified
+		// when any writes to our persistent store happen, so we can update our UI.
+		// For example, if CloudKit makes a change to our data, we want to be told about that so
+		// we can update our UI. To do this, we us the two lines below
+		// 1.
+		// Tell our main persistent store about any writes to the store (disk) happens
+		// Make an announcement when changes happen
+		container.persistentStoreDescriptions.first?.setOption(true as NSNumber,
+															   forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+		// 2.
+		// * Watch for the announcement we setup above and call our method remoteStoreChanged(_: Notification)
+		// * 'object: Any?' is where the change will happen
+		NotificationCenter.default.addObserver(forName: .NSPersistentStoreRemoteChange,
+											   object: container.persistentStoreCoordinator,
+											   queue: .main,
+											   using: remoteStoreChanged)
+
 		// loads our data model, if it's not there already, so it's ready for us to query and work with
 		container.loadPersistentStores { storeDescription, error in
 			if let error {
 				fatalError("Fatal error loading store: \(error.localizedDescription)")
 			}
 		}
+	}
+
+
+	func remoteStoreChanged(_ notification: Notification) {
+		// Announce a change so our SwiftUI views will reload
+		objectWillChange.send()
 	}
 
 	// Sample data
@@ -48,7 +79,7 @@ class DataController: ObservableObject {
 
 			for j in 1...10 {
 				let issue = Issue(context: viewContext)
-				issue.title = "Issue \(j)"
+				issue.title = "Issue \(i)-\(j)"
 				issue.content = "Description goes here"
 				issue.creationDate = .now
 				issue.completed = Bool.random()
@@ -67,6 +98,7 @@ class DataController: ObservableObject {
 	}
 
 	func delete(_ object: NSManagedObject) {
+		objectWillChange.send()
 		container.viewContext.delete(object)
 		save()
 	}

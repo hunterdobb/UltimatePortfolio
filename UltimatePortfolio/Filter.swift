@@ -16,6 +16,7 @@ struct Filter: Identifiable, Hashable {
 	var tag: Tag?
 
 	static var all = Filter(id: UUID(), name: "All Issues", icon: "tray")
+	// (86_400 * -7) => 7 days ago
 	static var recent = Filter(id: UUID(), name: "Recent Issues", icon: "clock", minModificationDate: .now.addingTimeInterval(86_400 * -7))
 
 	func hash(into hasher: inout Hasher) {

@@ -17,6 +17,7 @@
 		B53DB2C929A6AE4200577F20 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53DB2C829A6AE4200577F20 /* SidebarView.swift */; };
 		B53DB2CB29A6AE5000577F20 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53DB2CA29A6AE5000577F20 /* DetailView.swift */; };
 		B53DB2CD29A6AFAC00577F20 /* Filter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53DB2CC29A6AFAC00577F20 /* Filter.swift */; };
+		B5458B8229A93160000939A7 /* IssueRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5458B8129A93160000939A7 /* IssueRow.swift */; };
 		B572AF8929A6C968007DE280 /* Issue-CoreDataHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B572AF8829A6C968007DE280 /* Issue-CoreDataHelpers.swift */; };
 /* End PBXBuildFile section */
 
@@ -34,6 +35,7 @@
 		B53DB2C829A6AE4200577F20 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		B53DB2CA29A6AE5000577F20 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
 		B53DB2CC29A6AFAC00577F20 /* Filter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Filter.swift; sourceTree = "<group>"; };
+		B5458B8129A93160000939A7 /* IssueRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IssueRow.swift; sourceTree = "<group>"; };
 		B572AF8829A6C968007DE280 /* Issue-CoreDataHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Issue-CoreDataHelpers.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -74,6 +76,7 @@
 				B53DB2CC29A6AFAC00577F20 /* Filter.swift */,
 				B53DB2C829A6AE4200577F20 /* SidebarView.swift */,
 				B53DB2B529A6592F00577F20 /* ContentView.swift */,
+				B5458B8129A93160000939A7 /* IssueRow.swift */,
 				B53DB2CA29A6AE5000577F20 /* DetailView.swift */,
 				B53DB2C529A6676000577F20 /* DataController.swift */,
 				B53DB2C229A6595200577F20 /* Main.xcdatamodeld */,
@@ -170,6 +173,7 @@
 				B53DB2C629A6676000577F20 /* DataController.swift in Sources */,
 				B53DB2C929A6AE4200577F20 /* SidebarView.swift in Sources */,
 				B53DB2B629A6592F00577F20 /* ContentView.swift in Sources */,
+				B5458B8229A93160000939A7 /* IssueRow.swift in Sources */,
 				B53DB2B429A6592F00577F20 /* UltimatePortfolioApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

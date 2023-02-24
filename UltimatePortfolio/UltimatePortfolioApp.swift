@@ -17,6 +17,8 @@ struct UltimatePortfolioApp: App {
 	 dataController, which is not necessary at this time
 
 	 @State = make it, hold it, don't keep it alive
+
+	 *** TOLD TO CHANGE IT TO @StateObject IN "Showing, deleting, and synchronizing issues" ***
 	 */
 	@State var dataController = DataController()
 
