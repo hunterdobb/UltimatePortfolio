@@ -20,7 +20,7 @@ struct UltimatePortfolioApp: App {
 
 	 *** TOLD TO CHANGE IT TO @StateObject IN "Showing, deleting, and synchronizing issues" ***
 	 */
-	@State var dataController = DataController()
+	@StateObject var dataController = DataController()
 
     var body: some Scene {
         WindowGroup {

@@ -43,6 +43,7 @@ struct SidebarView: View {
 				.onDelete(perform: delete)
 			}
 		}
+		.navigationTitle("Issues")
 		.toolbar {
 			Button {
 				dataController.deleteAll()

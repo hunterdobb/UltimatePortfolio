@@ -10,7 +10,9 @@ import CoreData
 class DataController: ObservableObject {
 	let container: NSPersistentCloudKitContainer
 
+	// These are used for list selection
 	@Published var selectedFilter: Filter? = .all
+	@Published var selectedIssue: Issue?
 
 	static var preview: DataController = {
 		let dataController = DataController(inMemory: true)
@@ -44,7 +46,7 @@ class DataController: ObservableObject {
 															   forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
 		// 2.
 		// * Watch for the announcement we setup above and call our method remoteStoreChanged(_: Notification)
-		// * 'object: Any?' is where the change will happen
+		// * 'object: Any?' parameter is where the change will happen
 		NotificationCenter.default.addObserver(forName: .NSPersistentStoreRemoteChange,
 											   object: container.persistentStoreCoordinator,
 											   queue: .main,
@@ -102,7 +104,8 @@ class DataController: ObservableObject {
 		container.viewContext.delete(object)
 		save()
 	}
-	//									1. Find all issues or tags or whatever object
+
+	// Delete using a fetch request:	1. Find all issues or tags or whatever object
 	private func delete(_ fetchRequest: NSFetchRequest<NSFetchRequestResult>) {
 		// 2. Convert that to be a batch delete for that thing (issue, tag, etc.)
 		let batchDeleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
@@ -130,5 +133,16 @@ class DataController: ObservableObject {
 		delete(issuesRequest)
 
 		save()
+	}
+
+	func missingTags(from issue: Issue) -> [Tag] {
+		let request = Tag.fetchRequest()
+		let allTags = (try? container.viewContext.fetch(request)) ?? []
+
+		let allTagsSet = Set(allTags)
+		// Get the tags that are not a part of the issues tags
+		let difference = allTagsSet.symmetricDifference(issue.issueTags)
+
+		return difference.sorted()
 	}
 }
