@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+
+
 struct IssueRow: View {
 	// We're watching this for announcement of changes coming in, usually remote changes from iCloud
 	@EnvironmentObject var dataController: DataController
@@ -50,6 +52,6 @@ struct IssueRow: View {
 struct IssueRow_Previews: PreviewProvider {
     static var previews: some View {
 		IssueRow(issue: .example)
-			.environmentObject(DataController())
+			.environmentObject(DataController(inMemory: true))
     }
 }

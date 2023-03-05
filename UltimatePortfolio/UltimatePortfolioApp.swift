@@ -22,6 +22,9 @@ struct UltimatePortfolioApp: App {
 	 */
 	@StateObject var dataController = DataController()
 
+	// Watch for the phase of my scene
+	@Environment(\.scenePhase) var scenePhase
+
     var body: some Scene {
         WindowGroup {
 			NavigationSplitView {
@@ -37,6 +40,12 @@ struct UltimatePortfolioApp: App {
 			.environment(\.managedObjectContext, dataController.container.viewContext)
 			// Inject the entire dataController into the environment as-well.
 			.environmentObject(dataController)
+			// Used for saving when the app enters the background
+			.onChange(of: scenePhase) { phase in
+				if phase != .active { // i.e: '.inactive' or '.background'
+					dataController.save()
+				}
+			}
         }
     }
 }

@@ -26,5 +26,6 @@ struct DetailView: View {
 struct DetailView_Previews: PreviewProvider {
     static var previews: some View {
         DetailView()
+			.environmentObject(DataController(inMemory: true))
     }
 }

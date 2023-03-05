@@ -14,11 +14,34 @@ class DataController: ObservableObject {
 	@Published var selectedFilter: Filter? = .all
 	@Published var selectedIssue: Issue?
 
+	@Published var filterText = ""
+	@Published var filterTokens = [Tag]()
+
+	// We define this here so we can cancel it if another change is made.
+	// We use it in the 'queueSave()' function below
+	private var saveTask: Task<Void, Error>?
+
 	static var preview: DataController = {
 		let dataController = DataController(inMemory: true)
 		dataController.createSampleData()
 		return dataController
 	}()
+
+	/// Used for filtering tags based on tokens. To filter by tags the user types a '#' then the tag they want to filter by
+	var suggestedFilterTokens: [Tag] {
+		guard filterText.starts(with: "#") else {
+			return []
+		}
+
+		let trimmedFilterText = String(filterText.dropFirst()).trimmingCharacters(in: .whitespaces)
+		let request = Tag.fetchRequest()
+
+		if trimmedFilterText.isEmpty == false {
+			request.predicate = NSPredicate(format: "name CONTAINS[c] %@", trimmedFilterText)
+		}
+
+		return (try? container.viewContext.fetch(request).sorted()) ?? []
+	}
 
 	init(inMemory: Bool = false) {
 		container = NSPersistentCloudKitContainer(name: "Main")
@@ -96,6 +119,23 @@ class DataController: ObservableObject {
 	func save() {
 		if container.viewContext.hasChanges {
 			try? container.viewContext.save()
+			print("Saved!")
+		}
+	}
+
+	/// Wait 3 seconds before saving when a change is made. Restart the 3 second
+	/// delay if another change is made before 3 seconds is up.
+	func queueSave() {
+		saveTask?.cancel()
+		// 'saveTask' is defined near top of class
+		// '@MainActor' tells the Task it must run its body on the main actor (thread)
+		// ^ this is so we keep out Core Data work on the main thread to be safer.
+		saveTask = Task { @MainActor in
+			// When this is canceled it throws an error. We don't need to handle it
+			// because we're just using it to prevent 'save()' from being run too often
+			print("Queuing save")
+			try await Task.sleep(for: .seconds(3))
+			save()
 		}
 	}
 
@@ -125,6 +165,7 @@ class DataController: ObservableObject {
 		}
 	}
 
+	/// Used when generating preview data
 	func deleteAll() {
 		let tagsRequest: NSFetchRequest<NSFetchRequestResult> = Tag.fetchRequest()
 		delete(tagsRequest)
@@ -135,6 +176,10 @@ class DataController: ObservableObject {
 		save()
 	}
 
+	/// Pass in an issue and get back an array of tags that don't belong to it. This is used for tag selection on a particular
+	/// issue, so we can differentiate selected tags and non-selected tags.
+	/// - Parameter issue: The issue we wish to get the missing tags for
+	/// - Returns: An array of tags that are not a part of the issue passed in
 	func missingTags(from issue: Issue) -> [Tag] {
 		let request = Tag.fetchRequest()
 		let allTags = (try? container.viewContext.fetch(request)) ?? []
@@ -144,5 +189,53 @@ class DataController: ObservableObject {
 		let difference = allTagsSet.symmetricDifference(issue.issueTags)
 
 		return difference.sorted()
+	}
+
+	// (!) We moved this from ContentView to DataController, which is a safe place for any
+	// Core Data code unless we have specific needs. (!)
+	/// Gets the issues for the selected filter. If it's a tag use that, otherwise do a regular fetch request to fetch all objects
+	func issuesForSelectedFilter() -> [Issue] {
+		let filter = selectedFilter ?? .all
+		var predicates = [NSPredicate]()
+
+		if let tag = filter.tag {
+			// If we have a tag attached to our filter, we filter on that
+			// Does the tags relationship for our CD Issue object contain the tag chosen in the sidebar
+			let tagPredicate = NSPredicate(format: "tags CONTAINS %@", tag)
+			predicates.append(tagPredicate)
+		} else {
+			// If no tag is attached, we filter on the 'minModificationDate' either all or recent (past 7 days)
+			let datePredicate = NSPredicate(format: "modificationDate > %@", filter.minModificationDate as NSDate)
+			predicates.append(datePredicate)
+		}
+
+		let trimmedFilterText = filterText.trimmingCharacters(in: .whitespaces)
+
+		if trimmedFilterText.isEmpty == false {
+			// By default CONTAINS is case-sensitive, adding [c] makes it case-insensitive
+			// Filters our Issue object based on the title and content properties
+			let titlePredicate = NSPredicate(format: "title CONTAINS[c] %@", trimmedFilterText)
+			let contentFilter = NSPredicate(format: "content CONTAINS[c] %@", trimmedFilterText)
+			// We use 'orPredicateWithSubpredicates' so only one needs to be true to be included
+			let combinedPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: [titlePredicate, contentFilter])
+			predicates.append(combinedPredicate)
+		}
+
+		if filterTokens.isEmpty == false {
+			for filterToken in filterTokens {
+				let tokenPredicate = NSPredicate(format: "tags CONTAINS %@", filterToken)
+				predicates.append(tokenPredicate)
+			}
+		}
+
+		// The '.fetchRequest()' func is auto generated in Issue+CoreDataProperties
+		let request = Issue.fetchRequest()
+		// NSCompoundPredicate is a subclass of NSPredicate, so we can assign it to 'request.predicate'
+		// which is of type 'NSPredicate?'
+		request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+
+		// Run the fetch request and return it sorted
+		let allIssues = (try? container.viewContext.fetch(request)) ?? []
+		return allIssues.sorted()
 	}
 }

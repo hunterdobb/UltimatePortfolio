@@ -72,11 +72,22 @@ struct IssueView: View {
 			}
 		}
 		.disabled(issue.isDeleted)
+		// • The reason we don't use '.onChange(of: issue)' is because it won't fire.
+		// 		This is because the actual 'issue' instance is not changing, only the
+		// 		values within 'issue' are changing.
+		// • Using '.onReceive(of: issue)' watches for the issue to announce changes
+		// 		using @Published
+		// Our Issue object conforms to 'ObservableObject' automatically from Core Data
+		// because 'NSManagedObject' subclasses 'ObservableObject'
+		.onReceive(issue.objectWillChange) { _ in
+			dataController.queueSave()
+		}
     }
 }
 
 struct IssueView_Previews: PreviewProvider {
     static var previews: some View {
 		IssueView(issue: .example)
+			.environmentObject(DataController(inMemory: true))
     }
 }
