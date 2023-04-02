@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+/// A view that displays a single issue for editing
+///
+/// This view is initialized in ``DetailView``.
+///
+/// ```swift
+/// var test = ""
+/// ```
 struct IssueView: View {
 	@EnvironmentObject var dataController: DataController
 	@ObservedObject var issue: Issue

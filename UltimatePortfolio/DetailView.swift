@@ -19,7 +19,9 @@ struct DetailView: View {
 			}
 		}
 		.navigationTitle("Details")
+		#if !os(macOS) // I added this
 		.navigationBarTitleDisplayMode(.inline)
+		#endif
     }
 }
 

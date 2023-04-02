@@ -7,6 +7,16 @@
 
 import CoreData
 
+enum SortType: String {
+	// the rawValue strings are the attribute names from Core Data
+	case dateCreated = "creationDate"
+	case dateModified = "modificationDate"
+}
+
+enum Status {
+	case all, open, closed
+}
+
 class DataController: ObservableObject {
 	let container: NSPersistentCloudKitContainer
 
@@ -16,6 +26,12 @@ class DataController: ObservableObject {
 
 	@Published var filterText = ""
 	@Published var filterTokens = [Tag]()
+
+	@Published var filterEnabled = false
+	@Published var filterPriority = -1 // 0 low, 1 medium, 2 high, -1 any
+	@Published var filterStatus = Status.all // open, closed, all
+	@Published var sortType = SortType.dateCreated
+	@Published var sortNewestFirst = true
 
 	// We define this here so we can cancel it if another change is made.
 	// We use it in the 'queueSave()' function below
@@ -228,11 +244,31 @@ class DataController: ObservableObject {
 			}
 		}
 
+		// We only want to add the filter predicates if the user enables filtering in the menu
+		if filterEnabled {
+			// i.e. only check if filterPriority is not -1. Where -1 means include all priorities
+			if filterPriority >= 0 {
+				let priorityFilter = NSPredicate(format: "priority = %d", filterPriority)
+				predicates.append(priorityFilter)
+			}
+
+			if filterStatus != .all {
+				let lookForClosed = filterStatus == .closed
+				// We use 'NSNumber(value: lookForClosed)' to convert true/false to 1/0 since that is how NSPredicate reads it
+				let statusFilter = NSPredicate(format: "completed = %@", NSNumber(value: lookForClosed))
+				predicates.append(statusFilter)
+			}
+		}
+
 		// The '.fetchRequest()' func is auto generated in Issue+CoreDataProperties
 		let request = Issue.fetchRequest()
 		// NSCompoundPredicate is a subclass of NSPredicate, so we can assign it to 'request.predicate'
 		// which is of type 'NSPredicate?'
 		request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+		// 'sortType.rawValue' maps to our Core Data attributes ('creationDate' and 'modificationDate')
+		// We are using 'sortNewestFirst' to determine newest first or oldest first
+		// So we are saying to either sort using 'creationDate' or 'modificationDate' from Core Data
+		request.sortDescriptors = [NSSortDescriptor(key: sortType.rawValue, ascending: sortNewestFirst)]
 
 		// Run the fetch request and return it sorted
 		let allIssues = (try? container.viewContext.fetch(request)) ?? []
