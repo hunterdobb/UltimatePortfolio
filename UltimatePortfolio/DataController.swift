@@ -132,6 +132,7 @@ class DataController: ObservableObject {
 		try? viewContext.save()
 	}
 
+	// Calling save on the viewContext saves the changes from memory into persistent storage
 	func save() {
 		if container.viewContext.hasChanges {
 			try? container.viewContext.save()
@@ -273,5 +274,31 @@ class DataController: ObservableObject {
 		// Run the fetch request and return it sorted
 		let allIssues = (try? container.viewContext.fetch(request)) ?? []
 		return allIssues.sorted()
+	}
+
+	func newTag() {
+		let tag = Tag(context: container.viewContext)
+		tag.id = UUID()
+		tag.name = "New Tag"
+		save()
+	}
+
+	func newIssue() {
+		let issue = Issue(context: container.viewContext)
+		issue.title = "New Issue"
+		issue.creationDate = .now
+		// priority is 0 by default, content is nil by default, completed is false by default,
+		// modificationDate takes care of itself
+		issue.priority = 1 // give new issues a medium priority
+
+		// Add the new issue to the tag the user is viewing
+		if let tag = selectedFilter?.tag {
+			issue.addToTags(tag)
+		}
+
+		save()
+
+		// Set selectedIssue to the new issue so the user can immediately edit
+		selectedIssue = issue
 	}
 }

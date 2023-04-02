@@ -15,14 +15,13 @@ struct NoIssueView: View {
 			.font(.title)
 			.foregroundStyle(.secondary)
 
-		Button("New Issue") {
-			// make new issue
-		}
+		Button("New Issue", action: dataController.newIssue)
     }
 }
 
 struct NoIssueView_Previews: PreviewProvider {
     static var previews: some View {
         NoIssueView()
+			.environmentObject(DataController.preview)
     }
 }

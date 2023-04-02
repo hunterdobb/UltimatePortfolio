@@ -52,6 +52,6 @@ struct IssueRow: View {
 struct IssueRow_Previews: PreviewProvider {
     static var previews: some View {
 		IssueRow(issue: .example)
-			.environmentObject(DataController(inMemory: true))
+			.environmentObject(DataController.preview)
     }
 }

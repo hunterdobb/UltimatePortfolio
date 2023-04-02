@@ -69,6 +69,10 @@ struct ContentView: View {
 				Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
 					.symbolVariant(dataController.filterEnabled ? .fill : .none)
 			}
+
+			Button(action: dataController.newIssue) {
+				Label("New issue", systemImage: "square.and.pencil")
+			}
 		}
 	}
 
@@ -85,6 +89,6 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
-			.environmentObject(DataController(inMemory: true))
+			.environmentObject(DataController.preview)
     }
 }
