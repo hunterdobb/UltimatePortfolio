@@ -1,0 +1,162 @@
+[
+	{
+		"name": "Első lépések",
+		"description": "Adja hozzá az első tételt.",
+		"color": "Light Blue",
+		"criterion": "issues",
+		"value": 1,
+		"image": "figure.walk"
+	},
+	{
+		"name": "Nagyszerű kezdet",
+		"description": "Adjon hozzá 10 tételt.",
+		"color": "Light Blue",
+		"criterion": "issues",
+		"value": 10,
+		"image": "hand.thumbsup.fill"
+	},
+	{
+		"name": "Feljebb lépés",
+		"description": "Adjon hozzá 20 tételt.",
+		"color": "Light Blue",
+		"criterion": "issues",
+		"value": 20,
+		"image": "tray.and.arrow.up.fill"
+	},
+	{
+		"name": "Felgyorsul",
+		"description": "Adjon hozzá 50 tételt.",
+		"color": "Light Blue",
+		"criterion": "issues",
+		"value": 50,
+		"image": "speedometer"
+	},
+	{
+		"name": "Hullámzik",
+		"description": "Adjon hozzá 100 tételt.",
+		"color": "Light Blue",
+		"criterion": "issues",
+		"value": 100,
+		"image": "dot.radiowaves.left.and.right"
+	},
+	{
+		"name": "Nagy teljesítményű",
+		"description": "Adjon hozzá 250 tételt.",
+		"color": "Light Blue",
+		"criterion": "issues",
+		"value": 250,
+		"image": "square.stack.3d.up.fill"
+	},
+	{
+		"name": "Sztár előadó",
+		"description": "Adjon hozzá 500 tételt.",
+		"color": "Light Blue",
+		"criterion": "issues",
+		"value": 500,
+		"image": "star.circle.fill"
+	},
+	{
+		"name": "Bajnok előadó",
+		"description": "Adjon hozzá 1000 tételt.",
+		"color": "Light Blue",
+		"criterion": "issues",
+		"value": 1000,
+		"image": "crown.fill"
+	},
+	{
+		"name": "Dobozok ellenőrzése",
+		"description": "Zárja be az első tételt.",
+		"color": "Green",
+		"criterion": "closed",
+		"value": 1,
+		"image": "checkmark.shield.fill"
+	},
+	{
+		"name": "Ringatózva",
+		"description": "Zárjon be 10 tételt.",
+		"color": "Green",
+		"criterion": "closed",
+		"value": 10,
+		"image": "guitars.fill"
+	},
+	{
+		"name": "A 20 elég",
+		"description": "Zárjon be 20 tételt.",
+		"color": "Green",
+		"criterion": "closed",
+		"value": 20,
+		"image": "20.square.fill"
+	},
+	{
+		"name": "Telitalálat!",
+		"description": "Zárjon be 50 tételt.",
+		"color": "Green",
+		"criterion": "closed",
+		"value": 50,
+		"image": "target"
+	},
+	{
+		"name": "Magasan repül",
+		"description": "Zárjon be 100 tételt.",
+		"color": "Green",
+		"criterion": "closed",
+		"value": 100,
+		"image": "airplane.circle.fill"
+	},
+	{
+		"name": "Lángol!",
+		"description": "Zárjon be 250 tételt.",
+		"color": "Green",
+		"criterion": "closed",
+		"value": 250,
+		"image": "flame.fill"
+	},
+	{
+		"name": "Nagy főnök",
+		"description": "Zárjon be 500 tételt.",
+		"color": "Green",
+		"criterion": "closed",
+		"value": 500,
+		"image": "text.badge.checkmark"
+	},
+	{
+		"name": "Bumm!",
+		"description": "Zárjon be 1000 tételt.",
+		"color": "Green",
+		"criterion": "closed",
+		"value": 1000,
+		"image": "bolt.circle.fill"
+	},
+	{
+		"name": "Kis cimkéző",
+		"description": "Adja hozzá az első címkét.",
+		"color": "Gold",
+		"criterion": "tags",
+		"value": 1,
+		"image": "tag.fill"
+	},
+	{
+		"name": "Közepes cimkéző",
+		"description": "Adjon hozzá 10 címkét.",
+		"color": "Gold",
+		"criterion": "tags",
+		"value": 10,
+		"image": "tag.circle.fill"
+	},
+	{
+		"name": "Király cimkéző",
+		"description": "Adjon hozzá 50 címkét.",
+		"color": "Gold",
+		"criterion": "tags",
+		"value": 50,
+		"image": "square.grid.3x1.folder.fill.badge.plus"
+	},
+	{
+		"name": "Támogató",
+		"description": "Megvásárolta a prémium verziót.",
+		"color": "Purple",
+		"criterion": "unlock",
+		"value": 0,
+		"image": "dollarsign.square.fill"
+	}
+]

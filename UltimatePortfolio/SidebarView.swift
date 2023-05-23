@@ -16,7 +16,7 @@ struct SidebarView: View {
 	// as tags are added or removed
 	@FetchRequest(sortDescriptors: [SortDescriptor(\.name)]) var tags: FetchedResults<Tag>
 
-	// Used
+	// Used for renaming a tag
 	@State private var tagToRename: Tag?
 	@State private var renamingTag = false
 	@State private var tagName = ""
@@ -31,57 +31,39 @@ struct SidebarView: View {
     var body: some View {
 		List(selection: $dataController.selectedFilter) {
 			Section("Smart Filters") {
-				ForEach(smartFilters) { filter in
-					NavigationLink(value: filter) {
-						Label(filter.name, systemImage: filter.icon)
-					}
-				}
+				ForEach(smartFilters, content: SmartFilterRow.init)
 			}
 
 			Section("Tags") {
 				ForEach(tagFilters) { filter in
-					NavigationLink(value: filter) {
-						Label(filter.name, systemImage: filter.icon)
-							.badge(filter.tag?.tagActiveIssues.count ?? 0)
-							.contextMenu {
-								Button {
-									rename(filter)
-								} label: {
-									Label("Rename", systemImage: "pencil")
-								}
-							}
-					}
+					UserFilterRow(filter: filter, rename: rename, delete: delete)
 				}
 				.onDelete(perform: delete)
 			}
 		}
-		.navigationTitle("Issues")
-		.toolbar {
-			Button(action: dataController.newTag) {
-				Label("Add tag", systemImage: "plus")
-			}
-
-			#if DEBUG
-			Button {
-				dataController.deleteAll()
-				dataController.createSampleData()
-			} label: {
-				Label("ADD SAMPLES", systemImage: "flame")
-			}
-			#endif
-		}
+		.navigationTitle("Filters")
+		.toolbar(content: SidebarViewToolbar.init)
 		.alert("Rename tag", isPresented: $renamingTag) {
 			Button("Ok", action: completeRename)
 			Button("Cancel", role: .cancel) { }
 			TextField("New name", text: $tagName)
 		}
+		
     }
 
+	// Used for swipe to delete
 	func delete(_ offsets: IndexSet) {
 		for offset in offsets {
 			let item = tags[offset]
 			dataController.delete(item)
 		}
+	}
+
+	// Used for contextMenu delete
+	func delete(_ filter: Filter) {
+		guard let tag = filter.tag else { return }
+		dataController.delete(tag)
+		dataController.save()
 	}
 
 	func rename(_ filter: Filter) {
@@ -98,7 +80,9 @@ struct SidebarView: View {
 
 struct SidebarView_Previews: PreviewProvider {
     static var previews: some View {
-        SidebarView()
-			.environmentObject(DataController.preview)
+        NavigationStack {
+        	SidebarView()
+				.environmentObject(DataController.preview)
+        }
     }
 }

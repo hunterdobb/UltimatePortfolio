@@ -134,6 +134,9 @@ class DataController: ObservableObject {
 
 	// Calling save on the viewContext saves the changes from memory into persistent storage
 	func save() {
+		// Clear any queued saves since we are about to save now
+		saveTask?.cancel()
+
 		if container.viewContext.hasChanges {
 			try? container.viewContext.save()
 			print("Saved!")
@@ -146,7 +149,7 @@ class DataController: ObservableObject {
 		saveTask?.cancel()
 		// 'saveTask' is defined near top of class
 		// '@MainActor' tells the Task it must run its body on the main actor (thread)
-		// ^ this is so we keep out Core Data work on the main thread to be safer.
+		// ^ this is so we keep our Core Data work on the main thread to be safer.
 		saveTask = Task { @MainActor in
 			// When this is canceled it throws an error. We don't need to handle it
 			// because we're just using it to prevent 'save()' from being run too often
@@ -269,23 +272,26 @@ class DataController: ObservableObject {
 		// 'sortType.rawValue' maps to our Core Data attributes ('creationDate' and 'modificationDate')
 		// We are using 'sortNewestFirst' to determine newest first or oldest first
 		// So we are saying to either sort using 'creationDate' or 'modificationDate' from Core Data
-		request.sortDescriptors = [NSSortDescriptor(key: sortType.rawValue, ascending: sortNewestFirst)]
+		// I had to invert the value of sortNewestFirst to get it to sort correctly.
+		request.sortDescriptors = [NSSortDescriptor(key: sortType.rawValue, ascending: !sortNewestFirst)]
 
-		// Run the fetch request and return it sorted
+		// Run the fetch request and return it. (We don't need to say '.sorted()' because we set the sortDescriptors above)
 		let allIssues = (try? container.viewContext.fetch(request)) ?? []
-		return allIssues.sorted()
+		return allIssues
 	}
 
+	/// Creates a new blank tag.
 	func newTag() {
 		let tag = Tag(context: container.viewContext)
 		tag.id = UUID()
-		tag.name = "New Tag"
+		tag.name = NSLocalizedString("New tag", comment: "Create a new tag")
 		save()
 	}
 
+	/// Creates a new blank issue for the selected tag and give it a medium priority.
 	func newIssue() {
 		let issue = Issue(context: container.viewContext)
-		issue.title = "New Issue"
+		issue.title = NSLocalizedString("New issue", comment: "Create a new issue")
 		issue.creationDate = .now
 		// priority is 0 by default, content is nil by default, completed is false by default,
 		// modificationDate takes care of itself
@@ -300,5 +306,37 @@ class DataController: ObservableObject {
 
 		// Set selectedIssue to the new issue so the user can immediately edit
 		selectedIssue = issue
+	}
+
+	/// A helper method that returns the number of items in a fetch request.
+	/// If the value is nil, we return 0.
+	func count<T>(for fetchRequest: NSFetchRequest<T>) -> Int {
+		(try? container.viewContext.count(for: fetchRequest)) ?? 0
+	}
+
+	/// Determines if an award has been earned and returns true if it has, or false otherwise.
+	func hasEarned(award: Award) -> Bool {
+		switch award.criterion {
+		case "issues":
+			// return true if they added a certain number of issues
+			let fetchRequest = Issue.fetchRequest()
+			let awardCount = count(for: fetchRequest)
+			return awardCount >= award.value
+		case "closed":
+			// return true if they closed a certain number of issues
+			let fetchRequest = Issue.fetchRequest()
+			fetchRequest.predicate = NSPredicate(format: "completed = true")
+			let awardCount = count(for: fetchRequest)
+			return awardCount >= award.value
+		case "tags":
+			// return true if they created a certain number of tags
+			let fetchRequest = Tag.fetchRequest()
+			let awardCount = count(for: fetchRequest)
+			return awardCount >= award.value
+		default:
+			// an unknown award criterion; this should never be allowed
+			// fatalError("Unknown award criterion: \(award.criterion)")
+			return false
+		}
 	}
 }

@@ -10,10 +10,6 @@ import SwiftUI
 /// A view that displays a single issue for editing
 ///
 /// This view is initialized in ``DetailView``.
-///
-/// ```swift
-/// var test = ""
-/// ```
 struct IssueView: View {
 	@EnvironmentObject var dataController: DataController
 	@ObservedObject var issue: Issue
@@ -38,34 +34,8 @@ struct IssueView: View {
 					Text("High").tag(Int16(2))
 				}
 
-				Menu {
-					ForEach(issue.issueTags) { tag in
-						Button {
-							issue.removeFromTags(tag)
-						} label: {
-							Label(tag.tagName, systemImage: "checkmark")
-						}
-					}
-
-					let otherTags = dataController.missingTags(from: issue)
-
-					if otherTags.isEmpty == false {
-						Divider()
-
-						Section("Add Tags") {
-							ForEach(otherTags) { tag in
-								Button(tag.tagName) {
-									issue.addToTags(tag)
-								}
-							}
-						}
-					}
-				} label: {
-					Text(issue.issueTagsList)
-						.multilineTextAlignment(.leading)
-						.frame(maxWidth: .infinity, alignment: .leading)
-						.animation(nil, value: issue.issueTagsList)
-				}
+				TagsMenuView(issue: issue)
+				
 			}
 
 			Section {
@@ -89,6 +59,9 @@ struct IssueView: View {
 		.onReceive(issue.objectWillChange) { _ in
 			dataController.queueSave()
 		}
+		// Immediately save when the user submits a TextField instead of waiting for the queueSave
+		.onSubmit(dataController.save)
+		.toolbar { IssueViewToolbar(issue: issue) }
     }
 }
 
