@@ -16,7 +16,6 @@ struct Award: Decodable, Identifiable {
 	let value: Int
 	let image: String
 
-
 	// static constants can access each other because they are created lazily.
 	// For example, if Awards.example is called first, it will see it needs to create
 	//   Awards.allAwards and do that first, then create example.
