@@ -62,6 +62,8 @@ class DataController: ObservableObject {
 	init(inMemory: Bool = false) {
 		container = NSPersistentCloudKitContainer(name: "Main")
 
+		// For testing and previewing purposes, we create a temporary, in-memory database
+		// by writing to /dev/null so our data is destroyed after the app finishes running
 		if inMemory {
 			container.persistentStoreDescriptions.first?.url = URL(filePath: "/dev/null")
 		}
@@ -69,10 +71,10 @@ class DataController: ObservableObject {
 		// Automatically apply to our viewContext (memory) any changes that happen to the
 		// persistent store (SQLite database on disk). This is so these two stay in sync automatically.
 		container.viewContext.automaticallyMergesChangesFromParent = true
-		// How to handle merging local and remote data
-		// NSMergePolicy.mergeByPropertyObjectTrump => In-memory changes take precedence over remote changes
-		container.viewContext.mergePolicy = NSMergePolicy.mergeByPropertyObjectTrump
 
+		// How to handle merging local and remote data
+		// NSMergePolicy.mergeByPropertyObjectTrump means in-memory changes take precedence over remote changes
+		container.viewContext.mergePolicy = NSMergePolicy.mergeByPropertyObjectTrump
 
 		// When working across multiple devices, to ensure our syncing works properly, we want to be notified
 		// when any writes to our persistent store happen, so we can update our UI.
@@ -81,24 +83,27 @@ class DataController: ObservableObject {
 		// 1.
 		// Tell our main persistent store about any writes to the store (disk) happens
 		// Make an announcement when changes happen
-		container.persistentStoreDescriptions.first?.setOption(true as NSNumber,
-															   forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+		container.persistentStoreDescriptions.first?.setOption(
+			true as NSNumber,
+			forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey
+		)
 		// 2.
 		// * Watch for the announcement we setup above and call our method remoteStoreChanged(_: Notification)
 		// * 'object: Any?' parameter is where the change will happen
-		NotificationCenter.default.addObserver(forName: .NSPersistentStoreRemoteChange,
-											   object: container.persistentStoreCoordinator,
-											   queue: .main,
-											   using: remoteStoreChanged)
+		NotificationCenter.default.addObserver(
+			forName: .NSPersistentStoreRemoteChange,
+			object: container.persistentStoreCoordinator,
+			queue: .main,
+			using: remoteStoreChanged
+		)
 
 		// loads our data model, if it's not there already, so it's ready for us to query and work with
-		container.loadPersistentStores { storeDescription, error in
+		container.loadPersistentStores { _, error in
 			if let error {
 				fatalError("Fatal error loading store: \(error.localizedDescription)")
 			}
 		}
 	}
-
 
 	func remoteStoreChanged(_ notification: Notification) {
 		// Announce a change so our SwiftUI views will reload
@@ -113,14 +118,14 @@ class DataController: ObservableObject {
 		// viewContext holds active objects in memory, only writes them back to persistent storage when we do .save()
 		let viewContext = container.viewContext
 
-		for i in 1...5 {
+		for tagCounter in 1...5 {
 			let tag = Tag(context: viewContext)
 			tag.id = UUID()
-			tag.name = "Tag \(i)"
+			tag.name = "Tag \(tagCounter)"
 
-			for j in 1...10 {
+			for issueCounter in 1...10 {
 				let issue = Issue(context: viewContext)
-				issue.title = "Issue \(i)-\(j)"
+				issue.title = "Issue \(tagCounter)-\(issueCounter)"
 				issue.content = "Description goes here"
 				issue.creationDate = .now
 				issue.completed = Bool.random()
@@ -196,8 +201,8 @@ class DataController: ObservableObject {
 		save()
 	}
 
-	/// Pass in an issue and get back an array of tags that don't belong to it. This is used for tag selection on a particular
-	/// issue, so we can differentiate selected tags and non-selected tags.
+	/// Pass in an issue and get back an array of tags that don't belong to it. This is used for tag selection on a
+	/// particular issue, so we can differentiate selected tags and non-selected tags.
 	/// - Parameter issue: The issue we wish to get the missing tags for
 	/// - Returns: An array of tags that are not a part of the issue passed in
 	func missingTags(from issue: Issue) -> [Tag] {
@@ -213,7 +218,8 @@ class DataController: ObservableObject {
 
 	// (!) We moved this from ContentView to DataController, which is a safe place for any
 	// Core Data code unless we have specific needs. (!)
-	/// Gets the issues for the selected filter. If it's a tag use that, otherwise do a regular fetch request to fetch all objects
+	/// Gets the issues for the selected filter. If it's a tag use that, otherwise do a regular fetch request
+	/// to fetch all objects
 	func issuesForSelectedFilter() -> [Issue] {
 		let filter = selectedFilter ?? .all
 		var predicates = [NSPredicate]()
@@ -236,8 +242,12 @@ class DataController: ObservableObject {
 			// Filters our Issue object based on the title and content properties
 			let titlePredicate = NSPredicate(format: "title CONTAINS[c] %@", trimmedFilterText)
 			let contentFilter = NSPredicate(format: "content CONTAINS[c] %@", trimmedFilterText)
+
 			// We use 'orPredicateWithSubpredicates' so only one needs to be true to be included
-			let combinedPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: [titlePredicate, contentFilter])
+			let combinedPredicate = NSCompoundPredicate(
+				orPredicateWithSubpredicates: [titlePredicate, contentFilter]
+			)
+
 			predicates.append(combinedPredicate)
 		}
 

@@ -20,9 +20,19 @@ struct Filter: Identifiable, Hashable {
 		tag?.tagActiveIssues.count ?? 0
 	}
 
-	static var all = Filter(id: UUID(), name: "All Issues", icon: "tray")
+	static var all = Filter(
+		id: UUID(),
+		name: "All Issues",
+		icon: "tray"
+	)
+
 	// (86_400 * -7) => 7 days ago
-	static var recent = Filter(id: UUID(), name: "Recent Issues", icon: "clock", minModificationDate: .now.addingTimeInterval(86_400 * -7))
+	static var recent = Filter(
+		id: UUID(),
+		name: "Recent Issues",
+		icon: "clock",
+		minModificationDate: .now.addingTimeInterval(86_400 * -7)
+	)
 
 	func hash(into hasher: inout Hasher) {
 		// When we calculate the hash value of this Filter struct, only calculate the id's hash,

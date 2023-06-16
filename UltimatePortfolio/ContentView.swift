@@ -34,7 +34,7 @@ struct ContentView: View {
 
 	func delete(_ offsets: IndexSet) {
 		let issues = dataController.issuesForSelectedFilter()
-		
+
 		for offset in offsets {
 			let item = issues[offset]
 			dataController.delete(item)

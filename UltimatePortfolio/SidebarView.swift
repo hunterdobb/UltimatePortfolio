@@ -48,7 +48,7 @@ struct SidebarView: View {
 			Button("Cancel", role: .cancel) { }
 			TextField("New name", text: $tagName)
 		}
-		
+
     }
 
 	// Used for swipe to delete
