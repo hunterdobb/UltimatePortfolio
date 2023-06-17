@@ -17,7 +17,10 @@ enum Status {
 	case all, open, closed
 }
 
+/// An environment singleton responsible for managing our Core Data stack, including handling saving,
+/// counting fetch requests, tracking orders, and dealing with sample data.
 class DataController: ObservableObject {
+	/// The lone CloudKit container used to store all our data
 	let container: NSPersistentCloudKitContainer
 
 	// These are used for list selection
@@ -59,6 +62,11 @@ class DataController: ObservableObject {
 		return (try? container.viewContext.fetch(request).sorted()) ?? []
 	}
 
+	/// Initializes a data controller, either in memory (for testing use such as previewing),
+	/// or in permanent storage (for use in regular app runs.)
+	///
+	/// Defaults to permanent storage.
+	/// - Parameter inMemory: Wether to store this data in temporary memory or not.
 	init(inMemory: Bool = false) {
 		container = NSPersistentCloudKitContainer(name: "Main")
 
@@ -81,8 +89,8 @@ class DataController: ObservableObject {
 		// For example, if CloudKit makes a change to our data, we want to be told about that so
 		// we can update our UI. To do this, we us the two lines below
 		// 1.
-		// Tell our main persistent store about any writes to the store (disk) happens
-		// Make an announcement when changes happen
+		// * Tell our main persistent store about any writes to the store (disk) happens
+		// * Make an announcement when changes happen
 		container.persistentStoreDescriptions.first?.setOption(
 			true as NSNumber,
 			forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey
@@ -110,7 +118,6 @@ class DataController: ObservableObject {
 		objectWillChange.send()
 	}
 
-	// Sample data
 	func createSampleData() {
 		// viewContext is the "pool of data" that has been loaded from disk. It's whats live right now
 		// We've already loaded and created our persistent storage (the database on disk) exists in long-term storage
@@ -137,7 +144,11 @@ class DataController: ObservableObject {
 		try? viewContext.save()
 	}
 
-	// Calling save on the viewContext saves the changes from memory into persistent storage
+	/// Saves our Core Data context iff there are changes. This silently ignores
+	/// any errors caused by saving, but this should be fine because all
+	/// our attributes are optional.
+	///
+	/// Calling save on the viewContext saves the changes from memory into persistent storage
 	func save() {
 		// Clear any queued saves since we are about to save now
 		saveTask?.cancel()
@@ -216,10 +227,12 @@ class DataController: ObservableObject {
 		return difference.sorted()
 	}
 
-	// (!) We moved this from ContentView to DataController, which is a safe place for any
-	// Core Data code unless we have specific needs. (!)
-	/// Gets the issues for the selected filter. If it's a tag use that, otherwise do a regular fetch request
-	/// to fetch all objects
+	/// Runs a fetch request with various predicates that filter the user's issues based on
+	/// tag, title, content text, search tokens, priority, and completion status.
+	///
+	/// ❗️ We moved this from ContentView to DataController, which is a safe place for any
+	/// Core Data code unless we have specific needs.
+	/// - Returns: An array of all matching issues.
 	func issuesForSelectedFilter() -> [Issue] {
 		let filter = selectedFilter ?? .all
 		var predicates = [NSPredicate]()
@@ -307,7 +320,7 @@ class DataController: ObservableObject {
 		// modificationDate takes care of itself
 		issue.priority = 1 // give new issues a medium priority
 
-		// Add the new issue to the tag the user is viewing
+		// Add the new issue to the tag the user is viewing, if any
 		if let tag = selectedFilter?.tag {
 			issue.addToTags(tag)
 		}
