@@ -62,13 +62,32 @@ class DataController: ObservableObject {
 		return (try? container.viewContext.fetch(request).sorted()) ?? []
 	}
 
+	// We implemented this singleton to fix an error that randomly happens when running test.
+	// The problem before was our 'BaseTestCase' class created a new DataModel and since we import UltimatePortfolio
+	// with '@testable import UltimatePortfolio' our 'UltimatePortfolioApp: App' struct would be created also.
+	// This means two DataModels were being created and the system would sometimes get Issues and Tags confused
+	// between the two.
+	// By creating the NSManagedObjectModel as a static member of our class, we can ensure it's only created once. We then
+	// pass it in below when creating our NSPersistentCloudKitContainer.
+	static private let model: NSManagedObjectModel = {
+		guard let url = Bundle.main.url(forResource: "Main", withExtension: "momd") else {
+			fatalError("Failed to locate model file.")
+		}
+
+		guard let managedObjectModel = NSManagedObjectModel(contentsOf: url) else {
+			fatalError("Failed to load model file.")
+		}
+
+		return managedObjectModel
+	}()
+
 	/// Initializes a data controller, either in memory (for testing use such as previewing),
 	/// or in permanent storage (for use in regular app runs.)
 	///
 	/// Defaults to permanent storage.
 	/// - Parameter inMemory: Wether to store this data in temporary memory or not.
 	init(inMemory: Bool = false) {
-		container = NSPersistentCloudKitContainer(name: "Main")
+		container = NSPersistentCloudKitContainer(name: "Main", managedObjectModel: Self.model)
 
 		// For testing and previewing purposes, we create a temporary, in-memory database
 		// by writing to /dev/null so our data is destroyed after the app finishes running
