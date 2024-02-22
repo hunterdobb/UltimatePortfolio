@@ -8,43 +8,54 @@
 import SwiftUI
 
 struct ContentView: View {
-	@EnvironmentObject var dataController: DataController
+	@Environment(\.requestReview) var requestReview
+	@StateObject var viewModel: ViewModel
 
     var body: some View {
-		List(selection: $dataController.selectedIssue) {
-			ForEach(dataController.issuesForSelectedFilter()) { issue in
+		List(selection: $viewModel.selectedIssue) {
+			ForEach(viewModel.dataController.issuesForSelectedFilter()) { issue in
 				IssueRow(issue: issue)
 			}
-			.onDelete(perform: delete)
+			.onDelete(perform: viewModel.delete)
 		}
-		#if !os(macOS) // I added this
-		.listStyle(.insetGrouped)
-		#endif
-		.navigationTitle("Issues")
-		.toolbar(content: ContentViewToolbar.init)
+//		#if !os(macOS) // I added this
+//		.listStyle(.insetGrouped)
+//		#endif
+		.navigationTitle(viewModel.navTitle)
 		.searchable(
-			text: $dataController.filterText,
-			tokens: $dataController.filterTokens,
-			suggestedTokens: .constant(dataController.suggestedFilterTokens),
+			text: $viewModel.filterText,
+			tokens: $viewModel.filterTokens,
+			suggestedTokens: .constant(viewModel.suggestedFilterTokens),
 			prompt: "Filter issues, or type # to add tags"
 		) { tag in
 			Text(tag.tagName)
 		}
+		.toolbar(content: ContentViewToolbar.init)
+//		.onAppear(perform: askForReview)
+		.onOpenURL(perform: openURL)
 	}
 
-	func delete(_ offsets: IndexSet) {
-		let issues = dataController.issuesForSelectedFilter()
+	init(dataController: DataController) {
+		let viewModel = ViewModel(dataController: dataController)
+		_viewModel = StateObject(wrappedValue: viewModel)
+	}
 
-		for offset in offsets {
-			let item = issues[offset]
-			dataController.delete(item)
+	func askForReview() {
+		if viewModel.shouldRequestReview {
+			requestReview()
+		}
+	}
+
+	func openURL(_ url: URL) {
+		if url.absoluteString.contains("newIssue") {
+			viewModel.newIssue()
 		}
 	}
 }
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()
-			.environmentObject(DataController.preview)
+		ContentView(dataController: .preview)
+//			.environmentObject(DataController.preview)
     }
 }

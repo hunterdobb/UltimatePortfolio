@@ -11,21 +11,29 @@ struct IssueRow: View {
 	// We're watching this for announcement of changes coming in, usually remote changes from iCloud
 	@EnvironmentObject var dataController: DataController
 	// We're watching this for local changes to our issue happening right now
-	@ObservedObject var issue: Issue
+//	@ObservedObject var issue: Issue
+	@StateObject var viewModel: ViewModel
 
     var body: some View {
-		NavigationLink(value: issue) {
+		NavigationLink(value: viewModel.issue) {
 			HStack {
 				Image(systemName: "exclamationmark.circle")
 					.imageScale(.large)
-					.opacity((issue.priority == 2) ? 1 : 0)
+					.opacity(viewModel.priorityIconOpacity)
+					.accessibilityIdentifier(viewModel.priorityIconIdentifier)
 
 				VStack(alignment: .leading) {
-					Text(issue.issueTitle)
-						.font(.headline)
-						.lineLimit(1)
+					HStack(alignment: .firstTextBaseline) {
+						Text(viewModel.issueTitle)
+							.font(.headline)
+							.lineLimit(1)
 
-					Text(issue.issueTagsList)
+						if viewModel.reminderEnabled {
+							Image(systemName: "bell")
+						}
+					}
+
+					Text(viewModel.issueTagsList)
 						.foregroundStyle(.secondary)
 						.lineLimit(1)
 				}
@@ -33,11 +41,11 @@ struct IssueRow: View {
 				Spacer()
 
 				VStack(alignment: .trailing) {
-					Text(issue.issueFormattedCreationDate)
-						.accessibilityLabel(issue.issueCreationDate.formatted(date: .abbreviated, time: .omitted))
+					Text(viewModel.creationDate)
+						.accessibilityLabel(viewModel.accessibilityCreationDate)
 						.font(.subheadline)
 
-					if issue.completed {
+					if viewModel.completed {
 						Text("CLOSED")
 							.font(.body.smallCaps())
 					}
@@ -45,8 +53,14 @@ struct IssueRow: View {
 				.foregroundStyle(.secondary)
 			}
 		}
-		.accessibilityHint(issue.priority == 2 ? "High priority" : "")
+		.accessibilityHint(viewModel.accessibilityHint)
+		.accessibilityIdentifier(viewModel.issueTitle)
     }
+
+	init(issue: Issue) {
+		let viewModel = ViewModel(issue: issue)
+		_viewModel = StateObject(wrappedValue: viewModel)
+	}
 }
 
 struct IssueRow_Previews: PreviewProvider {

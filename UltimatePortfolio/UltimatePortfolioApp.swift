@@ -5,6 +5,7 @@
 //  Created by Hunter Dobbelmann on 2/22/23.
 //
 
+import CoreSpotlight
 import SwiftUI
 
 @main
@@ -25,12 +26,15 @@ struct UltimatePortfolioApp: App {
 	// Watch for the phase of my scene
 	@Environment(\.scenePhase) var scenePhase
 
+	// Allows SwiftUI to use things from UIKit that are not yet in SwiftUI
+	@UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var body: some Scene {
         WindowGroup {
 			NavigationSplitView {
-				SidebarView()
+				SidebarView(dataController: dataController)
 			} content: {
-				ContentView()
+				ContentView(dataController: dataController)
 			} detail: {
 				DetailView()
 			}
@@ -38,14 +42,27 @@ struct UltimatePortfolioApp: App {
 			// This is because every time SwiftUI wants to make a query with Core Data, it has to know
 			// where to look for the data.
 			.environment(\.managedObjectContext, dataController.container.viewContext)
-			// Inject the entire dataController into the environment as-well.
 			.environmentObject(dataController)
-			// Used for saving when the app enters the background
-			.onChange(of: scenePhase) { phase in
-				if phase != .active { // i.e: '.inactive' or '.background'
-					dataController.save()
-				}
+			.onChange(of: scenePhase) { _, newValue in
+				backgroundSave(newValue)
 			}
+			.onContinueUserActivity(CSSearchableItemActionType, perform: loadSpotlightItem)
         }
     }
+
+	/// Load and open the issue initiated by spotlight
+	func loadSpotlightItem(_ userActivity: NSUserActivity) {
+		// Read out the string identifier that CoreSpotlight sent to us
+		if let uniqueIdentifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String {
+			dataController.selectedIssue = dataController.issue(with: uniqueIdentifier)
+			dataController.selectedFilter = .all
+		}
+	}
+
+	/// Save the view context when scenePhase is '.inactive' or '.background' (i.e. app enters background)
+	func backgroundSave(_ scenePhase: ScenePhase) {
+		if scenePhase != .active {
+			dataController.save()
+		}
+	}
 }

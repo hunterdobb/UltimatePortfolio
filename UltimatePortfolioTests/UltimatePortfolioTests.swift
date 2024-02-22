@@ -8,7 +8,7 @@
 import CoreData
 import XCTest
 
-// Using @testable makes things that don't have public available for us to use.
+// Using @testable makes things that aren't marked public available for us to use.
 // However, we still can't use things that are private.
 @testable import UltimatePortfolio
 

@@ -6,6 +6,8 @@
 //
 
 import CoreData
+import StoreKit
+import SwiftUI
 
 enum SortType: String {
 	// the rawValue strings are the attribute names from Core Data
@@ -23,6 +25,8 @@ class DataController: ObservableObject {
 	/// The lone CloudKit container used to store all our data
 	let container: NSPersistentCloudKitContainer
 
+	var spotlightDelegate: NSCoreDataCoreSpotlightDelegate?
+
 	// These are used for list selection
 	@Published var selectedFilter: Filter? = .all
 	@Published var selectedIssue: Issue?
@@ -39,6 +43,13 @@ class DataController: ObservableObject {
 	// We define this here so we can cancel it if another change is made.
 	// We use it in the 'queueSave()' function below
 	private var saveTask: Task<Void, Error>?
+	private var storeTask: Task<Void, Never>?
+
+	/// The UserDefaults suite where we're saving user data
+	let defaults: UserDefaults
+
+	/// The StoreKit products we've loaded for the store.
+	@Published var products = [Product]()
 
 	static var preview: DataController = {
 		let dataController = DataController(inMemory: true)
@@ -46,27 +57,11 @@ class DataController: ObservableObject {
 		return dataController
 	}()
 
-	/// Used for filtering tags based on tokens. To filter by tags the user types a '#' then the tag they want to filter by
-	var suggestedFilterTokens: [Tag] {
-		guard filterText.starts(with: "#") else {
-			return []
-		}
-
-		let trimmedFilterText = String(filterText.dropFirst()).trimmingCharacters(in: .whitespaces)
-		let request = Tag.fetchRequest()
-
-		if trimmedFilterText.isEmpty == false {
-			request.predicate = NSPredicate(format: "name CONTAINS[c] %@", trimmedFilterText)
-		}
-
-		return (try? container.viewContext.fetch(request).sorted()) ?? []
-	}
-
-	// We implemented this singleton to fix an error that randomly happens when running test.
-	// The problem before was our 'BaseTestCase' class created a new DataModel and since we import UltimatePortfolio
+	// We implemented this singleton to fix an error that randomly happens when running tests.
+	// The problem before was our 'BaseTestCase' class created a new DataController and since we import UltimatePortfolio
 	// with '@testable import UltimatePortfolio' our 'UltimatePortfolioApp: App' struct would be created also.
-	// This means two DataModels were being created and the system would sometimes get Issues and Tags confused
-	// between the two.
+	// This means two DataControllers were being created and the system would sometimes get Issues and Tags confused
+	// between the two controllers.
 	// By creating the NSManagedObjectModel as a static member of our class, we can ensure it's only created once. We then
 	// pass it in below when creating our NSPersistentCloudKitContainer.
 	static private let model: NSManagedObjectModel = {
@@ -86,8 +81,14 @@ class DataController: ObservableObject {
 	///
 	/// Defaults to permanent storage.
 	/// - Parameter inMemory: Wether to store this data in temporary memory or not.
-	init(inMemory: Bool = false) {
+	/// - Parameter defaults: The UserDefaults suite where user data should be stored
+	init(inMemory: Bool = false, defaults: UserDefaults = .standard) {
+		self.defaults = defaults
 		container = NSPersistentCloudKitContainer(name: "Main", managedObjectModel: Self.model)
+
+		storeTask = Task {
+			await monitorTransaction()
+		}
 
 		// For testing and previewing purposes, we create a temporary, in-memory database
 		// by writing to /dev/null so our data is destroyed after the app finishes running
@@ -125,10 +126,32 @@ class DataController: ObservableObject {
 		)
 
 		// loads our data model, if it's not there already, so it's ready for us to query and work with
-		container.loadPersistentStores { _, error in
+		container.loadPersistentStores { [weak self] _, error in
 			if let error {
 				fatalError("Fatal error loading store: \(error.localizedDescription)")
 			}
+
+			// Find description on disk
+			if let description = self?.container.persistentStoreDescriptions.first {
+				// Enable change tracking over time
+				description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+
+				// Make our indexer (spotlightDelegate) attach to the data and the store behind the scenes
+				// (Connects spotlight to Core Data)
+				if let coordinator = self?.container.persistentStoreCoordinator {
+					self?.spotlightDelegate = NSCoreDataCoreSpotlightDelegate(forStoreWith: description, coordinator: coordinator)
+				}
+
+				// Tell indexer to start working
+				self?.spotlightDelegate?.startSpotlightIndexing()
+			}
+
+			#if DEBUG
+			if CommandLine.arguments.contains("enable-testing") {
+				self?.deleteAll()
+				UIView.setAnimationsEnabled(false)
+			}
+			#endif
 		}
 	}
 
@@ -246,88 +269,21 @@ class DataController: ObservableObject {
 		return difference.sorted()
 	}
 
-	/// Runs a fetch request with various predicates that filter the user's issues based on
-	/// tag, title, content text, search tokens, priority, and completion status.
-	///
-	/// ❗️ We moved this from ContentView to DataController, which is a safe place for any
-	/// Core Data code unless we have specific needs.
-	/// - Returns: An array of all matching issues.
-	func issuesForSelectedFilter() -> [Issue] {
-		let filter = selectedFilter ?? .all
-		var predicates = [NSPredicate]()
-
-		if let tag = filter.tag {
-			// If we have a tag attached to our filter, we filter on that
-			// Does the tags relationship for our CD Issue object contain the tag chosen in the sidebar
-			let tagPredicate = NSPredicate(format: "tags CONTAINS %@", tag)
-			predicates.append(tagPredicate)
-		} else {
-			// If no tag is attached, we filter on the 'minModificationDate' either all or recent (past 7 days)
-			let datePredicate = NSPredicate(format: "modificationDate > %@", filter.minModificationDate as NSDate)
-			predicates.append(datePredicate)
-		}
-
-		let trimmedFilterText = filterText.trimmingCharacters(in: .whitespaces)
-
-		if trimmedFilterText.isEmpty == false {
-			// By default CONTAINS is case-sensitive, adding [c] makes it case-insensitive
-			// Filters our Issue object based on the title and content properties
-			let titlePredicate = NSPredicate(format: "title CONTAINS[c] %@", trimmedFilterText)
-			let contentFilter = NSPredicate(format: "content CONTAINS[c] %@", trimmedFilterText)
-
-			// We use 'orPredicateWithSubpredicates' so only one needs to be true to be included
-			let combinedPredicate = NSCompoundPredicate(
-				orPredicateWithSubpredicates: [titlePredicate, contentFilter]
-			)
-
-			predicates.append(combinedPredicate)
-		}
-
-		if filterTokens.isEmpty == false {
-			for filterToken in filterTokens {
-				let tokenPredicate = NSPredicate(format: "tags CONTAINS %@", filterToken)
-				predicates.append(tokenPredicate)
-			}
-		}
-
-		// We only want to add the filter predicates if the user enables filtering in the menu
-		if filterEnabled {
-			// i.e. only check if filterPriority is not -1. Where -1 means include all priorities
-			if filterPriority >= 0 {
-				let priorityFilter = NSPredicate(format: "priority = %d", filterPriority)
-				predicates.append(priorityFilter)
-			}
-
-			if filterStatus != .all {
-				let lookForClosed = filterStatus == .closed
-				// We use 'NSNumber(value: lookForClosed)' to convert true/false to 1/0 since that is how NSPredicate reads it
-				let statusFilter = NSPredicate(format: "completed = %@", NSNumber(value: lookForClosed))
-				predicates.append(statusFilter)
-			}
-		}
-
-		// The '.fetchRequest()' func is auto generated in Issue+CoreDataProperties
-		let request = Issue.fetchRequest()
-		// NSCompoundPredicate is a subclass of NSPredicate, so we can assign it to 'request.predicate'
-		// which is of type 'NSPredicate?'
-		request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
-		// 'sortType.rawValue' maps to our Core Data attributes ('creationDate' and 'modificationDate')
-		// We are using 'sortNewestFirst' to determine newest first or oldest first
-		// So we are saying to either sort using 'creationDate' or 'modificationDate' from Core Data
-		// I had to invert the value of sortNewestFirst to get it to sort correctly.
-		request.sortDescriptors = [NSSortDescriptor(key: sortType.rawValue, ascending: !sortNewestFirst)]
-
-		// Run the fetch request and return it. (We don't need to say '.sorted()' because we set the sortDescriptors above)
-		let allIssues = (try? container.viewContext.fetch(request)) ?? []
-		return allIssues
-	}
-
 	/// Creates a new blank tag.
-	func newTag() {
+	func newTag() -> Bool {
+		var shouldCreate = fullVersionUnlocked
+
+		if shouldCreate == false {
+			shouldCreate = count(for: Tag.fetchRequest()) < 3
+		}
+
+		guard shouldCreate else { return false }
+
 		let tag = Tag(context: container.viewContext)
 		tag.id = UUID()
 		tag.name = NSLocalizedString("New tag", comment: "Create a new tag")
 		save()
+		return true
 	}
 
 	/// Creates a new blank issue for the selected tag and give it a medium priority.
@@ -364,21 +320,40 @@ class DataController: ObservableObject {
 			let fetchRequest = Issue.fetchRequest()
 			let awardCount = count(for: fetchRequest)
 			return awardCount >= award.value
+
 		case "closed":
 			// return true if they closed a certain number of issues
 			let fetchRequest = Issue.fetchRequest()
 			fetchRequest.predicate = NSPredicate(format: "completed = true")
 			let awardCount = count(for: fetchRequest)
 			return awardCount >= award.value
+
 		case "tags":
 			// return true if they created a certain number of tags
 			let fetchRequest = Tag.fetchRequest()
 			let awardCount = count(for: fetchRequest)
 			return awardCount >= award.value
+
+		case "unlock":
+			return fullVersionUnlocked
+
 		default:
 			// an unknown award criterion; this should never be allowed
 			// fatalError("Unknown award criterion: \(award.criterion)")
 			return false
 		}
+	}
+
+	/// Used for finding an issue using its uniqueIdentifier
+	///
+	/// We use this for opening an issue from Spotlight
+	func issue(with uniqueIdentifier: String) -> Issue? {
+		guard let url = URL(string: uniqueIdentifier) else { return nil }
+
+		guard let id = container.persistentStoreCoordinator.managedObjectID(forURIRepresentation: url) else {
+			return nil
+		}
+
+		return try? container.viewContext.existingObject(with: id) as? Issue
 	}
 }

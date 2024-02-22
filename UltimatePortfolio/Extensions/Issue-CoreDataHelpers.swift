@@ -26,7 +26,7 @@ extension Issue {
 		modificationDate ?? .now
 	}
 
-	// Core Data uses NSSet, here we are converting it to an array and sorting it
+	// Core Data uses NSSet, so we are converting it to an array and sorting it
 	// to make it easier to work with
 	var issueTags: [Tag] {
 		let result = tags?.allObjects as? [Tag] ?? []
@@ -34,10 +34,11 @@ extension Issue {
 	}
 
 	var issueTagsList: String {
-		guard let tags else { return "No tags" }
+		let noTags = String(localized: "No tags", comment: "The user has not created any tags yet.")
+		guard let tags else { return noTags }
 
 		if tags.count == 0 {
-			return "No tags"
+			return noTags
 		} else {
 			return issueTags.map(\.tagName).formatted()
 		}
@@ -45,15 +46,15 @@ extension Issue {
 
 	var issueStatus: String {
 		if completed {
-			return "Closed"
+			return String(localized: "Closed", comment: "This issue has been resolved by the user.")
 		} else {
-			return "Open"
+			return String(localized: "Open", comment: "This issue is currently unresolved by the user.")
 		}
 	}
 
-	// Added here to help with localization
-	var issueFormattedCreationDate: String {
-		issueCreationDate.formatted(date: .numeric, time: .omitted)
+	var issueReminderTime: Date {
+		get { reminderTime ?? .now }
+		set { reminderTime = newValue }
 	}
 
 	static var example: Issue {

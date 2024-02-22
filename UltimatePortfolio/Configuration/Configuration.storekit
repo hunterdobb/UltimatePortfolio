@@ -1,0 +1,106 @@
+{
+  "identifier" : "66BE5F3C",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : true,
+      "internalID" : "3D8F7459",
+      "localizations" : [
+        {
+          "description" : "Get access to the full app!",
+          "displayName" : "Premium Unlock",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Hozzáférés a teljes alkalmazáshoz",
+          "displayName" : "Prémium feloldás",
+          "locale" : "hu"
+        }
+      ],
+      "productID" : "com.hunterdobbapps.UltimatePortfolio.premiumUnlock",
+      "referenceName" : "Premium Unlock",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : true,
+      "internalID" : "E462CE15",
+      "localizations" : [
+        {
+          "description" : "This is a test product.",
+          "displayName" : "Test Product",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.hunterdobbapps.UltimatePortfolio.testProduct",
+      "referenceName" : "Test Product",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_askToBuyEnabled" : true,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : {
+          "index" : 2,
+          "type" : "generic"
+        },
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
