@@ -8,6 +8,7 @@
 import CoreData
 import StoreKit
 import SwiftUI
+import WidgetKit
 
 enum SortType: String {
 	// the rawValue strings are the attribute names from Core Data
@@ -45,7 +46,8 @@ class DataController: ObservableObject {
 	private var saveTask: Task<Void, Error>?
 	private var storeTask: Task<Void, Never>?
 
-	/// The UserDefaults suite where we're saving user data
+	/// The UserDefaults suite where we're saving user data.
+	/// Used for determining if the premium unlock is purchases
 	let defaults: UserDefaults
 
 	/// The StoreKit products we've loaded for the store.
@@ -84,6 +86,8 @@ class DataController: ObservableObject {
 	/// - Parameter defaults: The UserDefaults suite where user data should be stored
 	init(inMemory: Bool = false, defaults: UserDefaults = .standard) {
 		self.defaults = defaults
+
+		// We are using the init with managedObjectModel to fix an issue with testing
 		container = NSPersistentCloudKitContainer(name: "Main", managedObjectModel: Self.model)
 
 		storeTask = Task {
@@ -94,6 +98,12 @@ class DataController: ObservableObject {
 		// by writing to /dev/null so our data is destroyed after the app finishes running
 		if inMemory {
 			container.persistentStoreDescriptions.first?.url = URL(filePath: "/dev/null")
+		} else {
+			// Add our Core Data store to the App Group for use with the widget extension
+			let groupID = "group.com.hunterdobbapps.upa"
+			if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupID) {
+				container.persistentStoreDescriptions.first?.url = url.appending(path: "Main.sqlite")
+			}
 		}
 
 		// Automatically apply to our viewContext (memory) any changes that happen to the
@@ -115,6 +125,13 @@ class DataController: ObservableObject {
 			true as NSNumber,
 			forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey
 		)
+
+		// Setting up the PersistentHistoryTracking outside the loadPersistentStores fixes potential
+		// problems with our widget extension
+		container.persistentStoreDescriptions.first?.setOption(
+			true as NSNumber,
+			forKey: NSPersistentHistoryTrackingKey
+		)
 		// 2.
 		// * Watch for the announcement we setup above and call our method remoteStoreChanged(_: Notification)
 		// * 'object: Any?' parameter is where the change will happen
@@ -133,8 +150,8 @@ class DataController: ObservableObject {
 
 			// Find description on disk
 			if let description = self?.container.persistentStoreDescriptions.first {
-				// Enable change tracking over time
-				description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+				// This is now set up above, out side this closure
+//				description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
 
 				// Make our indexer (spotlightDelegate) attach to the data and the store behind the scenes
 				// (Connects spotlight to Core Data)
@@ -197,6 +214,7 @@ class DataController: ObservableObject {
 
 		if container.viewContext.hasChanges {
 			try? container.viewContext.save()
+			WidgetCenter.shared.reloadAllTimelines()
 			print("Saved!")
 		}
 	}
@@ -312,38 +330,6 @@ class DataController: ObservableObject {
 		(try? container.viewContext.count(for: fetchRequest)) ?? 0
 	}
 
-	/// Determines if an award has been earned and returns true if it has, or false otherwise.
-	func hasEarned(award: Award) -> Bool {
-		switch award.criterion {
-		case "issues":
-			// return true if they added a certain number of issues
-			let fetchRequest = Issue.fetchRequest()
-			let awardCount = count(for: fetchRequest)
-			return awardCount >= award.value
-
-		case "closed":
-			// return true if they closed a certain number of issues
-			let fetchRequest = Issue.fetchRequest()
-			fetchRequest.predicate = NSPredicate(format: "completed = true")
-			let awardCount = count(for: fetchRequest)
-			return awardCount >= award.value
-
-		case "tags":
-			// return true if they created a certain number of tags
-			let fetchRequest = Tag.fetchRequest()
-			let awardCount = count(for: fetchRequest)
-			return awardCount >= award.value
-
-		case "unlock":
-			return fullVersionUnlocked
-
-		default:
-			// an unknown award criterion; this should never be allowed
-			// fatalError("Unknown award criterion: \(award.criterion)")
-			return false
-		}
-	}
-
 	/// Used for finding an issue using its uniqueIdentifier
 	///
 	/// We use this for opening an issue from Spotlight
@@ -355,5 +341,18 @@ class DataController: ObservableObject {
 		}
 
 		return try? container.viewContext.existingObject(with: id) as? Issue
+	}
+
+	func fetchRequestForTopIssues(count: Int) -> NSFetchRequest<Issue> {
+		let request = Issue.fetchRequest()
+		request.predicate = NSPredicate(format: "completed = false")
+		request.sortDescriptors = [NSSortDescriptor(keyPath: \Issue.priority, ascending: false)]
+		request.fetchLimit = count
+
+		return request
+	}
+
+	func results<T: NSManagedObject>(for fetchRequest: NSFetchRequest<T>) -> [T] {
+		return (try? container.viewContext.fetch(fetchRequest)) ?? []
 	}
 }
